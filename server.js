@@ -47,8 +47,16 @@ app.put('/api/books/:id', async (req, res) => {
 
 app.delete('/api/books/:id', async (req, res) => {
   const { id } = req.params;
-  await pool.query('DELETE FROM books WHERE id = $1', [id]);
-  res.json({ message: 'Book deleted' });
+  try {
+    const result = await pool.query('DELETE FROM books WHERE id = $1 RETURNING *', [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Book not found' });
+    }
+    res.json({ message: 'Book deleted', book: result.rows[0] });
+  } catch (error) {
+    console.error('Error deleting book:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 const PORT = process.env.PORT || 3001;
